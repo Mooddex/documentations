@@ -1,0 +1,29 @@
+Code Audit Summary: useData Composable
+The following table documents the architectural and technical mistakes found in the provided code snippet as of 2026 standards.
+Category	Issue	Description
+Fetch API	Missing JSON Stringify	In addMovie and editMovie, the body is passed as a raw object. Fetch requires JSON.stringify(movie) to send data correctly.
+Fetch API	Missing Content-Type Header	Without headers { 'Content-Type': 'application/json' }, most modern APIs will fail to parse the incoming POST/PUT request body.
+Logic	Direct Response Pushing	In addMovie, you are doing movies.value.push(res). The res is a Fetch Response object, not the movie data. You must call await res.json() first.
+Logic	Redundant Fetching	In editMovie, you update the local state manually (movies.value[index] = res) and then immediately call getMovies(). This causes an unnecessary second network request.
+TypeScript	Missing Exports	The functions addMovie, deleteMovie, and editMovie are defined but not returned in the final object, making them inaccessible to components.
+Security	Base URL Handling	If VITE_BASE_API is missing or undefined in the .env file, the fetch call will target http://localhost:[port]/undefined, which is a common silent failure.
+Error Handling	Silent Failures	getMovies catches errors but doesn't update a dedicated error state. The UI will stay in a "loading" or "empty" state forever without notifying the user of a network failure.
+State Sync	Filter Mutation	In deleteMovie, the local state is updated regardless of whether the server-side delete actually succeeded (e.g., if the server returned a 500 error).
+Suggested Fixes
+Headers: Always include headers: { "Content-Type": "application/json" } for non-GET requests.
+Serialization: Wrap your payloads in JSON.stringify().
+Return Values: Add addMovie, deleteMovie, and editMovie to your return statement:
+javascript
+return {
+  movies,
+  getMovies,
+  addMovie,
+  deleteMovie,
+  editMovie,
+  isEmpty,
+  isLoading
+};
+Use code with caution.
+
+Response Handling: Always parse the response (await res.json()) before trying to push it into your reactive movies array.
+
